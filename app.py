@@ -1,42 +1,71 @@
-import streamlit as st
-import joblib
-import pandas as pd
+from importlib.resources import Package
 
-# Load model
-package = joblib.load("churn_model.pkl")
-model = package["model"]
-feature_columns = package["features"]
+import streamlit as st # pyright: ignore[reportMissingImports]
+import joblib # pyright: ignore[reportMissingImports]
+import pandas as pd # pyright: ignore[reportMissingModuleSource]
 
-st.title("Customer Churn Prediction App")
+# ==============================
+# 1️ LOAD MODEL AND COLUMNS
+# ==============================
+model = joblib.load("churn_model.pkl")
+model_columns = joblib.load("columns.pkl")
 
-# User inputs
-age = st.number_input("Age", min_value=10, max_value=100)
-watch_time = st.number_input("Watch Time Hours")
+# ==============================
+# 2️ PAGE TITLE
+# ==============================
+st.title("🎬 Netflix Churn Prediction App")
 
-country = st.selectbox("Country", ["USA", "UK", "France"])
-subscription = st.selectbox("Subscription Type", ["Basic", "Standard", "Premium"])
-genre = st.selectbox("Favorite Genre", ["Drama", "Comedy", "Sci-Fi", "Documentary"])
+st.write("Enter customer details below:")
 
-# Create input dataframe
-input_data = pd.DataFrame({
-    "Age": [age],
-    "Watch_Time_Hours": [watch_time],
-    "Country": [country],
-    "Subscription_Type": [subscription],
-    "Favorite_Genre": [genre]
-})
+# ==============================
+# 3️ USER INPUT
+# ==============================
+age = st.number_input("Age", min_value=10, max_value=100, value=25)
 
-# Convert to dummies
-input_data = pd.get_dummies(input_data)
+watch_time = st.number_input("Watch Time (Hours per Week)", 
+                             min_value=0.0, 
+                             max_value=100.0, 
+                             value=10.0)
 
-# Match training columns
-input_data = input_data.reindex(columns=feature_columns, fill_value=0)
+country = st.selectbox("Country", 
+                       ["Brazil", "Canada", "France", "Germany", "India"])
 
-# Prediction
-if st.button("Predict"):
-    prediction = model.predict(input_data)[0]
-    
+genre = st.selectbox("Favorite Genre", 
+                     ["Action", "Comedy", "Horror", "Romance", "Sci-Fi"])
+
+# ==============================
+# 4️ PREDICT BUTTON
+# ==============================
+if st.button("Predict Churn"):
+
+    # Create input dictionary
+    input_dict = {
+        "Age": age,
+        "Watch_Time_Hours": watch_time,
+        "Country": country,
+        "Favorite_Genre": genre
+    }
+
+    # Convert to DataFrame
+    input_df = pd.DataFrame([input_dict])
+
+    # Apply same encoding as training
+    input_df = pd.get_dummies(input_df)
+
+    # Match training columns exactly
+    input_df = input_df.reindex(columns=model_columns, fill_value=0)
+
+    # Make prediction
+    prediction = model.predict(input_df)[0]
+
+    # ==============================
+    # 5️ SHOW RESULT
+    # ==============================
     if prediction == 1:
-        st.error("Customer is likely to CHURN")
+        st.error(" This customer is likely to CHURN.")
     else:
-        st.success("Customer is NOT likely to churn")
+        st.success(" This customer is likely to STAY.")
+# DEBUG: Check package type and content
+
+print(type(Package))
+print(Package)
